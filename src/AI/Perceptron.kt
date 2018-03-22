@@ -5,10 +5,13 @@ import Functions.LinearFunction
 
 class Perceptron(val trainSet: ArrayList<Point>) {
 
-    val learnSpeed = 0.0001
+    val learnSpeed = 0.01
     val layers = ArrayList<Layer>()
     val transferFunction = HyperbolicFunction()
-    val maxIterationCount = 10000
+    val maxIterationCount = 10000000
+    val minAcceptedError = 0.05
+
+    var error = 1.0
 
     init {
         // Creating net of layers
@@ -28,20 +31,23 @@ class Perceptron(val trainSet: ArrayList<Point>) {
         do {
             train(); i++
             if (i > maxIterationCount) throw Exception("Maximum iterations count exceed")
-        } while (!trainSetRecognizedSuccessful())
+        } while (!trainSetRecognizedSuccessful() || error > minAcceptedError)
 
         println("Iterations: $i");       println()
         println("Trained!");             println()
     }
 
     private fun train() {
+        var error = 0.0
         trainSet.forEach { p ->
             classify(p)
-            backpropogation(p)
+            error += backpropogation(p)
         }
+        this.error = error / trainSet.size
+        println(this.error)
     }
 
-    private fun backpropogation(p: Point) {
+    private fun backpropogation(p: Point): Double {
         val expectedOut = pointToOutArray(p)
         layers.asReversed().forEachIndexed { i, layer ->
             if (i == layers.size - 1) return@forEachIndexed
@@ -61,6 +67,14 @@ class Perceptron(val trainSet: ArrayList<Point>) {
                 }
             }
         }
+        // Calculate error
+        var error = 0.0
+        layers.asReversed()[0].neurons.forEachIndexed { i, neuron ->
+            error += Math.abs(neuron.out - expectedOut[i])
+        }
+        error /= expectedOut.size
+
+        return error
     }
 
     fun classify(p: Point): Array<Double> {
